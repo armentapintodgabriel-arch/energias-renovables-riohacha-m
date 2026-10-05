@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#070B12">
+<title>⚡ Energía Eólica G.P. — Panel de control</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23070B12'/%3E%3Cpath d='M16 4v24M16 16l9-4M16 16l-6 10M16 16l-8-6' stroke='%232E8EFF' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+/* ---------------------------------------------------------
+   ENERGÍA EÓLICA G.P. — hoja de estilos
+   Paleta: azul oscuro / azul eléctrico / gris oscuro / negro
+   con verde tecnológico como acento de estado "en línea".
+--------------------------------------------------------- */
+:root{
+  --bg:#070B12; --panel:#0E1624; --panel2:#131F31; --raise:#17243A;
+  --line:#223049; --line2:#2C3E59;
+  --ink:#EAF2FB; --muted:#8CA0B8; --dim:#5E7389;
+  --blue:#2E8EFF; --blue-deep:#17294A; --blue-glow:rgba(46,142,255,.35);
+  --green:#17E3A0; --green-deep:#0C3A2C;
+  --red:#FF5A62; --red-deep:#3A1518;
+  --amber:#F2B33D;
+  --mono:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  --sans:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --disp:"Segoe UI Semibold","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  font-family:var(--sans);font-size:15.5px;line-height:1.5;color:var(--ink);
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(46,142,255,.14), transparent 60%),
+    radial-gradient(700px 400px at -10% 10%, rgba(23,227,160,.08), transparent 55%),
+    var(--bg);
+  padding:18px 14px calc(40px + env(safe-area-inset-bottom,0px));
+}
+::selection{background:var(--blue);color:#fff}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--disp);line-height:1.2;font-weight:700;letter-spacing:.01em}
+a{color:var(--blue)}
+
+/* ---------- Cabecera ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .bolt{
+  width:42px;height:42px;border-radius:10px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(160deg,var(--blue-deep),var(--panel2));border:1px solid var(--line2);
+}
+.brand h1{font-size:20px}
+.brand .sub{font-size:12.5px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em}
+.statuspill{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line2);
+  background:var(--panel2);font:600 13px var(--sans);
+}
+.statuspill .dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 4px var(--red-deep)}
+.statuspill.on .dot{background:var(--green);box-shadow:0 0 0 4px var(--green-deep);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.statuspill.on .dot{animation:none}}
+
+/* ---------- Paneles genéricos ---------- */
+.panel{
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);
+  border-radius:16px;padding:18px 18px 20px;margin-bottom:16px;position:relative;overflow:hidden;
+}
+.panel::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--blue),transparent 70%)}
+.panel h2{font-size:15px;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.panel h2 .ic{width:18px;height:18px;color:var(--blue);flex:none}
+.panel .desc{font-size:13px;color:var(--muted);margin-top:4px;max-width:60ch}
+.grid2{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
+
+/* ---------- Escena del parque ---------- */
+.scene-shell{padding:0;overflow:hidden}
+.scene{display:block;width:100%;height:auto;background:#0B1424}
+.cloud{animation:drift 60s linear infinite}
+.cloud.b{animation-duration:80s;animation-direction:reverse}
+@keyframes drift{from{transform:translateX(-10px)}50%{transform:translateX(14px)}to{transform:translateX(-10px)}}
+.blades{animation:spin var(--blade-dur,3s) linear infinite;transform-origin:center;transform-box:fill-box;animation-play-state:paused}
+.blades.run{animation-play-state:running}
+@keyframes spin{to{transform:rotate(360deg)}}
+.particle{animation:gust var(--wind-dur,4s) linear infinite;opacity:0}
+@keyframes gust{0%{transform:translateX(-30px);opacity:0}8%{opacity:.55}85%{opacity:.5}100%{transform:translateX(780px);opacity:0}}
+.flow{stroke-dasharray:5 6;animation:flowmove 1s linear infinite;opacity:0;transition:opacity .4s}
+.flow.on{opacity:.9}
+@keyframes flowmove{to{stroke-dashoffset:-22}}
+@media (prefers-reduced-motion:reduce){.blades,.particle,.flow,.cloud{animation:none!important}}
+.scenefoot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--panel);border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+.scenefoot b{color:var(--ink)}
+
+/* ---------- Controles ---------- */
+.ctl-row{margin:16px 0 0}
+.ctl-row label{display:flex;justify-content:space-between;font:600 13.5px var(--sans);margin-bottom:8px}
+.ctl-row label .val{font-family:var(--mono);color:var(--blue);font-weight:700}
+.ctl-row input[type=range]{
+  width:100%;height:34px;accent-color:var(--blue);background:transparent;
+}
+.ctl-row input[type=number]{
+  width:100%;font:600 15px var(--mono);padding:10px 12px;border-radius:9px;border:1px solid var(--line2);
+  background:var(--raise);color:var(--ink);min-height:42px;
+}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:var(--raise);border:1px solid var(--line2);border-radius:12px}
+.switch-row .lbl{font:700 14px var(--sans)}
+.switch-row .lbl small{display:block;font:400 12px var(--sans);color:var(--muted);margin-top:2px}
+.switch{
+  appearance:none;width:56px;height:32px;border-radius:999px;background:var(--line2);position:relative;cursor:pointer;
+  border:1px solid var(--line2);flex:none;transition:background .25s;
+}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#C9D6E3;transition:transform .25s}
+.switch[aria-pressed=true]{background:var(--green-deep);border-color:var(--green)}
+.switch[aria-pressed=true]::after{transform:translateX(24px);background:var(--green)}
+.resetlink{display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:none;border:0;color:var(--muted);font:600 12.5px var(--sans);cursor:pointer;text-decoration:underline}
+
+/* ---------- Terminal en vivo ---------- */
+.terminal{
+  background:#060A11;border:1px solid var(--line2);border-radius:12px;padding:14px 16px;
+  font-family:var(--mono);font-size:13.5px;
+}
+.terminal .thead{display:flex;align-items:center;gap:6px;color:var(--dim);margin-bottom:10px;font-size:12px}
+.terminal .thead i{width:9px;height:9px;border-radius:50%;background:var(--line2)}
+.trow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.trow:last-child{border-bottom:0}
+.trow .k{color:var(--muted)}
+.trow .v{color:var(--green);font-weight:700}
+.trow .v.red{color:var(--red)}
+.trow .v.blue{color:var(--blue)}
+
+/* ---------- Batería ---------- */
+.battery-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.battery-visual{width:70px;height:132px;border:3px solid var(--line2);border-radius:10px;position:relative;flex:none;background:var(--raise)}
+.battery-visual::before{content:"";position:absolute;left:50%;top:-9px;transform:translateX(-50%);width:26px;height:7px;background:var(--line2);border-radius:3px 3px 0 0}
+.battery-fill{position:absolute;left:3px;right:3px;bottom:3px;border-radius:6px;background:linear-gradient(180deg,var(--green),#0FA87A);height:10%;transition:height .6s ease}
+.battery-fill.low{background:linear-gradient(180deg,var(--red),#B5343A)}
+.battery-stats{flex:1;min-width:200px}
+.battery-pct{font-family:var(--disp);font-size:36px;font-weight:700;color:var(--green)}
+.battery-pct.low{color:var(--red)}
+.battery-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.cap-field{margin-top:14px;max-width:220px}
+.cap-field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+
+/* ---------- Días de actividad ---------- */
+.daygrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:4px}
+@media (min-width:600px){.daygrid{grid-template-columns:repeat(4,1fr)}}
+.daycard{background:var(--raise);border:1px solid var(--line2);border-radius:12px;padding:14px}
+.daycard .num{font-family:var(--disp);font-size:26px;font-weight:700;color:var(--blue)}
+.daycard .lbl{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ---------- Gráfico ---------- */
+.chart-toggles{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 10px;font-size:13px}
+.chart-toggles label{display:flex;align-items:center;gap:7px;cursor:pointer}
+.chart-toggles input{accent-color:var(--blue)}
+.swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
+.chartbox{background:var(--raise);border:1px solid var(--line2);border-radius:12px;padding:10px}
+.chartbox svg{display:block;width:100%;height:auto}
+.chart-note{font-size:12px;color:var(--dim);margin-top:8px}
+
+/* ---------- Informe ---------- */
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.btn{
+  appearance:none;border:1px solid var(--line2);background:var(--raise);color:var(--ink);font:600 14px var(--sans);
+  padding:12px 18px;border-radius:10px;min-height:46px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:linear-gradient(160deg,var(--blue),#1C6FE0);border-color:transparent;color:#fff}
+.btn.on{background:linear-gradient(160deg,var(--green),#0FA87A);border-color:transparent;color:#06140F}
+.btn.off{background:linear-gradient(160deg,var(--red),#C23339);border-color:transparent;color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.report{margin-top:18px;background:#060A11;border:1px solid var(--line2);border-radius:12px;padding:16px 18px;font-size:13.5px}
+.report h3{font-family:var(--mono);font-size:13px;color:var(--blue);letter-spacing:.06em;margin-bottom:10px}
+.report p{color:var(--ink);margin:8px 0;max-width:68ch}
+.report .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-family:var(--mono);font-size:12.8px;margin:10px 0}
+@media (min-width:560px){.report .rgrid{grid-template-columns:1fr 1fr 1fr}}
+.report .rgrid div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:4px 0}
+.report .rgrid span:last-child{color:var(--green);font-weight:700}
+.mail-note{font-size:12px;color:var(--dim);margin-top:10px;max-width:60ch}
+.btn.ghost2{background:transparent}
+.cfglink{background:none;border:0;color:var(--muted);font:600 12.5px var(--sans);text-decoration:underline;padding:4px 0;cursor:pointer;margin-top:12px}
+.cfgbox{margin-top:12px;padding:14px 16px;background:var(--raise);border:1px solid var(--line2);border-radius:12px}
+.cfgbox p{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.field{margin:12px 0}
+.field label{display:block;font-weight:600;font-size:13px;margin-bottom:5px}
+.field input{
+  width:100%;font:14px var(--mono);padding:11px 13px;border:1px solid var(--line2);border-radius:9px;
+  background:var(--bg);color:var(--ink);min-height:44px;
+}
+.status-line{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13.5px;padding:10px 12px;border-radius:10px;background:var(--raise);border:1px solid var(--line2)}
+.status-line.ok{background:var(--green-deep);border-color:var(--green);color:#9FF2D4}
+.status-line.err{background:var(--red-deep);border-color:var(--red);color:#FFB8BB}
+.spin{width:13px;height:13px;border-radius:50%;border:2px solid var(--line2);border-top-color:var(--blue);animation:sp .7s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+.foot{margin:28px 0 6px;font-size:12.5px;color:var(--dim);max-width:70ch}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- CABECERA -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="bolt" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2E8EFF" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M12 12l8-4M12 12l-5 9M12 12l-7-5"/></svg>
+      </span>
+      <div>
+        <h1>⚡ ENERGÍA EÓLICA G.P.</h1>
+        <p class="sub">PANEL DE MONITOREO · PARQUE EÓLICO</p>
+      </div>
+    </div>
+    <div class="statuspill" id="statuspill"><i class="dot"></i><span id="statustxt">APAGADO</span></div>
+  </header>
+
+  <!-- ESCENA -->
+  <section class="panel scene-shell">
+    <svg class="scene" id="scene" viewBox="0 0 820 320" role="img" aria-label="Parque eólico con cuatro aerogeneradores y una batería de almacenamiento">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#132A4D"/><stop offset="55%" stop-color="#0E2038"/><stop offset="100%" stop-color="#0B1726"/>
+        </linearGradient>
+        <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#FFE9B0" stop-opacity=".9"/><stop offset="55%" stop-color="#F2B33D" stop-opacity=".25"/><stop offset="100%" stop-color="#F2B33D" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#123326"/><stop offset="100%" stop-color="#0A2018"/>
+        </linearGradient>
+        <linearGradient id="towerGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#9BB0C4"/><stop offset="50%" stop-color="#DCE6F0"/><stop offset="100%" stop-color="#8095AC"/>
+        </linearGradient>
+      </defs>
+
+      <rect width="820" height="226" fill="url(#skyGrad)"/>
+      <circle cx="700" cy="56" r="60" fill="url(#sunGlow)"/>
+      <circle cx="700" cy="56" r="18" fill="#FFDE8A"/>
+
+      <!-- montañas -->
+      <path d="M0 190 L70 130 L140 190 L210 145 L300 190 L380 150 L460 190 L820 190 V226 H0Z" fill="#101E33" opacity=".9"/>
+      <path d="M0 200 L110 160 L230 200 L360 165 L500 200 L650 170 L820 200 V226 H0Z" fill="#0C1626"/>
+
+      <!-- nubes -->
+      <g class="cloud" fill="#D9E6F5" opacity=".18">
+        <circle cx="160" cy="48" r="9"/><circle cx="175" cy="42" r="12"/><circle cx="192" cy="48" r="9"/><rect x="155" y="48" width="44" height="9" rx="4.5"/>
+      </g>
+      <g class="cloud b" fill="#D9E6F5" opacity=".14">
+        <circle cx="430" cy="34" r="7"/><circle cx="442" cy="29" r="10"/><circle cx="455" cy="34" r="7"/><rect x="426" y="34" width="36" height="7" rx="3.5"/>
+      </g>
+
+      <!-- terreno -->
+      <rect y="226" width="820" height="20" fill="#164430"/>
+      <rect y="246" width="820" height="74" fill="url(#groundGrad)"/>
+      <g stroke="#1C5A40" stroke-width="1" opacity=".5">
+        <line x1="0" y1="264" x2="820" y2="264"/><line x1="0" y1="286" x2="820" y2="286"/><line x1="0" y1="306" x2="820" y2="306"/>
+      </g>
+
+      <!-- partículas de viento -->
+      <g id="particles" stroke="#9FC6FF" stroke-width="2" stroke-linecap="round" opacity=".9">
+        <line class="particle" x1="0" y1="70" x2="26" y2="70" style="animation-delay:0s"/>
+        <line class="particle" x1="0" y1="100" x2="22" y2="100" style="animation-delay:.9s"/>
+        <line class="particle" x1="0" y1="135" x2="30" y2="135" style="animation-delay:1.8s"/>
+        <line class="particle" x1="0" y1="165" x2="24" y2="165" style="animation-delay:.4s"/>
+        <line class="particle" x1="0" y1="195" x2="20" y2="195" style="animation-delay:2.4s"/>
+        <line class="particle" x1="0" y1="88" x2="24" y2="88" style="animation-delay:1.3s"/>
+      </g>
+
+      <!-- líneas de flujo de energía hacia la batería -->
+      <g id="flows" fill="none" stroke="#17E3A0" stroke-width="2">
+        <path class="flow" id="flow1" d="M120,246 Q300,260 714,234"/>
+        <path class="flow" id="flow2" d="M300,246 Q420,262 714,234"/>
+        <path class="flow" id="flow3" d="M480,246 Q560,260 714,234"/>
+        <path class="flow" id="flow4" d="M660,246 Q690,250 714,234"/>
+      </g>
+
+      <!-- 4 aerogeneradores -->
+      <g id="turbines">
+        <g data-turbine="1">
+          <rect x="116" y="126" width="8" height="120" rx="2" fill="url(#towerGrad)"/>
+          <rect x="106" y="118" width="28" height="13" rx="3" fill="#152439" stroke="#3A5272"/>
+          <g class="blades" transform="translate(120,124)">
+            <path d="M-3 0 L0 -52 L3 0Z" fill="#E7EEF6"/>
+            <path d="M-3 0 L0 -52 L3 0Z" fill="#E7EEF6" transform="rotate(120)"/>
+            <path d="M-3 0 L0 -52 L3 0Z" fill="#E7EEF6" transform="rotate(240)"/>
+          </g>
+          <circle cx="120" cy="124" r="5.5" fill="#0E1826" stroke="#2E8EFF" stroke-width="1.6"/>
+        </g>
+        <g data-turbine="2">
+          <rect x="296" y="110" width="8" height="136" rx="2" fill="url(#towerGrad)"/>
+          <rect x="286" y="102" width="28" height="13" rx="3" fill="#152439" stroke="#3A5272"/>
+          <g class="blades" transform="translate(300,108)">
+            <path d="M-3.2 0 L0 -56 L3.2 0Z" fill="#E7EEF6"/>
+            <path d="M-3.2 0 L0 -56 L3.2 0Z" fill="#E7EEF6" transform="rotate(120)"/>
+            <path d="M-3.2 0 L0 -56 L3.2 0Z" fill="#E7EEF6" transform="rotate(240)"/>
+          </g>
+          <circle cx="300" cy="108" r="6" fill="#0E1826" stroke="#2E8EFF" stroke-width="1.6"/>
+        </g>
+        <g data-turbine="3">
+          <rect x="478" y="120" width="8" height="126" rx="2" fill="url(#towerGrad)"/>
+          <rect x="468" y="112" width="28" height="13" rx="3" fill="#152439" stroke="#3A5272"/>
+          <g class="blades" transform="translate(482,118)">
+            <path d="M-3 0 L0 -53 L3 0Z" fill="#E7EEF6"/>
+            <path d="M-3 0 L0 -53 L3 0Z" fill="#E7EEF6" transform="rotate(120)"/>
+            <path d="M-3 0 L0 -53 L3 0Z" fill="#E7EEF6" transform="rotate(240)"/>
+          </g>
+          <circle cx="482" cy="118" r="5.6" fill="#0E1826" stroke="#2E8EFF" stroke-width="1.6"/>
+        </g>
+        <g data-turbine="4">
+          <rect x="656" y="133" width="8" height="113" rx="2" fill="url(#towerGrad)"/>
+          <rect x="646" y="125" width="28" height="13" rx="3" fill="#152439" stroke="#3A5272"/>
+          <g class="blades" transform="translate(660,131)">
+            <path d="M-2.8 0 L0 -48 L2.8 0Z" fill="#E7EEF6"/>
+            <path d="M-2.8 0 L0 -48 L2.8 0Z" fill="#E7EEF6" transform="rotate(120)"/>
+            <path d="M-2.8 0 L0 -48 L2.8 0Z" fill="#E7EEF6" transform="rotate(240)"/>
+          </g>
+          <circle cx="660" cy="131" r="5.3" fill="#0E1826" stroke="#2E8EFF" stroke-width="1.6"/>
+        </g>
+      </g>
+
+      <!-- batería de almacenamiento -->
+      <g transform="translate(726,196)">
+        <rect x="-16" y="-4" width="10" height="8" rx="2" fill="#3A5272"/>
+        <rect x="0" y="-18" width="42" height="56" rx="6" fill="#0E1826" stroke="#2E8EFF" stroke-width="1.6"/>
+        <rect id="batteryBar" x="5" y="33" width="32" height="0" rx="3" fill="#17E3A0"/>
+        <text x="21" y="-24" fill="#8CA0B8" font-size="10" font-family="ui-monospace,monospace" text-anchor="middle">BATERÍA</text>
+      </g>
+    </svg>
+    <div class="scenefoot">
+      <span>Parque eólico G.P. · 4 aerogeneradores · Ø 56 m</span>
+      <span id="sceneWindTxt">Viento: <b>0 m/s</b></span>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <!-- PANEL DE CONTROL -->
+    <section class="panel">
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>PANEL DE CONTROL</h2>
+      <p class="desc">Enciende el parque y ajusta el viento y el ángulo de las aspas para ver cómo cambia la generación en tiempo real.</p>
+
+      <div class="switch-row" style="margin-top:14px">
+        <span class="lbl">Parque eólico<small>Enciende o apaga la simulación completa</small></span>
+        <button class="switch" id="powerSwitch" type="button" role="switch" aria-pressed="false" aria-label="Encender o apagar el parque"></button>
+      </div>
+
+      <div class="ctl-row">
+        <label for="windRange">Velocidad del viento <span class="val" id="windVal">9.0 m/s</span></label>
+        <input type="range" id="windRange" min="0" max="25" step="0.5" value="9">
+      </div>
+      <div class="ctl-row">
+        <label for="angleRange">Ángulo de las aspas (pitch) <span class="val" id="angleVal">5°</span></label>
+        <input type="range" id="angleRange" min="0" max="30" step="1" value="5">
+      </div>
+
+      <button class="resetlink" id="resetBtn" type="button">↺ Reiniciar simulación completa</button>
+    </section>
+
+    <!-- TERMINAL EN VIVO -->
+    <section class="panel">
+      <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/></svg>TERMINAL EN VIVO</h2>
+      <div class="terminal" style="margin-top:12px">
+        <div class="thead"><i></i><i></i><i></i>&nbsp;scada://parque-eolico-gp</div>
+        <div class="trow"><span class="k">⚡ Potencia generada</span><span class="v" id="tPower">0 kW</span></div>
+        <div class="trow"><span class="k">🌬️ Velocidad del viento</span><span class="v blue" id="tWind">0.0 m/s</span></div>
+        <div class="trow"><span class="k">🔄 Coeficiente Cp</span><span class="v blue" id="tCp">0.00</span></div>
+        <div class="trow"><span class="k">🔋 Energía acumulada</span><span class="v" id="tEnergy">0.00 kWh</span></div>
+        <div class="trow"><span class="k">📐 Ángulo de las aspas</span><span class="v blue" id="tAngle">0°</span></div>
+        <div class="trow"><span class="k">🔋 Carga de la batería</span><span class="v" id="tBatt">0 %</span></div>
+        <div class="trow"><span class="k">🏭 Estado del parque</span><span class="v red" id="tState">APAGADO</span></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- BATERÍA -->
+  <section class="panel">
+    <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 10v4"/></svg>BATERÍA DE ALMACENAMIENTO</h2>
+    <div class="battery-wrap" style="margin-top:14px">
+      <div class="battery-visual"><div class="battery-fill" id="battFill"></div></div>
+      <div class="battery-stats">
+        <div class="battery-pct" id="battPct">0 %</div>
+        <p class="battery-sub" id="battSub">0.00 kWh almacenados de 50 kWh de capacidad</p>
+        <div class="cap-field">
+          <label for="capInput">Capacidad máxima (kWh)</label>
+          <input type="number" id="capInput" min="5" max="2000" step="5" value="50">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DÍAS DE ACTIVIDAD -->
+  <section class="panel">
+    <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>DÍAS DE ACTIVIDAD DEL PARQUE</h2>
+    <p class="desc">El tiempo simulado solo avanza mientras el parque está encendido, para que puedas observar su evolución.</p>
+    <div class="daygrid">
+      <div class="daycard"><div class="num" id="dDay">1</div><div class="lbl">Día actual</div></div>
+      <div class="daycard"><div class="num" id="dActive">0</div><div class="lbl">Días activos completados</div></div>
+      <div class="daycard"><div class="num" id="dHours">0.0</div><div class="lbl">Horas simuladas</div></div>
+      <div class="daycard"><div class="num" id="dEnergy">0.0</div><div class="lbl">Energía acumulada (kWh)</div></div>
+    </div>
+  </section>
+
+  <!-- GRÁFICO HISTÓRICO -->
+  <section class="panel">
+    <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19V9M11 19V5M18 19v-7"/></svg>HISTORIAL DE GENERACIÓN</h2>
+    <p class="desc">Cada serie se normaliza a su propio rango para poder compararlas en una sola gráfica; los valores exactos están en la terminal de arriba.</p>
+    <div class="chart-toggles">
+      <label><input type="checkbox" id="serP" checked><span class="swatch" style="background:#17E3A0"></span>Potencia (kW)</label>
+      <label><input type="checkbox" id="serV" checked><span class="swatch" style="background:#2E8EFF"></span>Viento (m/s)</label>
+      <label><input type="checkbox" id="serE"><span class="swatch" style="background:#F2B33D"></span>Energía acumulada (kWh)</label>
+    </div>
+    <div class="chartbox">
+      <svg id="chart" viewBox="0 0 600 190" preserveAspectRatio="none" aria-label="Gráfico histórico de potencia, viento y energía acumulada">
+        <g id="chartGrid" stroke="#1C2A3D" stroke-width="1"></g>
+        <polyline id="lineP" fill="none" stroke="#17E3A0" stroke-width="2"/>
+        <polyline id="lineV" fill="none" stroke="#2E8EFF" stroke-width="2"/>
+        <polyline id="lineE" fill="none" stroke="#F2B33D" stroke-width="2"/>
+      </svg>
+      <p class="chart-note" id="chartNote">Sin datos todavía — enciende el parque para empezar a registrar.</p>
+    </div>
+  </section>
+
+  <!-- INFORME -->
+  <section class="panel">
+    <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5M9 13h6M9 17h6"/></svg>INFORME — ENERGÍA EÓLICA G.P.</h2>
+    <p class="desc">Genera un informe con todo lo registrado hasta ahora: resumen, históricos, energía, viento, ángulo de aspas, Cp y estado de la batería.</p>
+    <div class="btnrow">
+      <button class="btn primary" id="genReportBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2h9l5 5v15H6z"/><path d="M15 2v5h5"/></svg>
+        Generar informe
+      </button>
+      <button class="btn" id="csvBtn" type="button" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+        Descargar CSV (Google Sheets)
+      </button>
+      <button class="btn" id="mailBtn" type="button" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        Enviar informe por correo
+      </button>
+      <button class="btn on" id="autoBtn" type="button" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2 3 14h8l-1 8 11-13h-8z"/></svg>
+        Enviar automático (hoja + PDF)
+      </button>
+    </div>
+    <p class="mail-note" id="mailNote" hidden>El correo se abrirá en tu cliente de correo (Gmail, Outlook, etc.) ya redactado para <strong>armentapintodgabriel@gmail.com</strong>, con el resumen del informe. Adjunta a mano el CSV que acabas de descargar si quieres incluir el historial completo — un enlace mailto no puede adjuntar archivos por sí solo.</p>
+
+    <div><button class="cfglink" id="cfgToggle" type="button">Configurar envío automático a Google Sheets + PDF</button></div>
+    <div class="cfgbox" id="cfgbox" hidden>
+      <p>Pega aquí la URL de la Web App de Google Apps Script (ver instrucciones en <code>Codigo_Apps_Script_Parque_Eolico.gs</code>). Al tocar «Enviar automático», el informe se escribe en tu hoja de cálculo y te llega un PDF por correo, sin pasar por tu cliente de correo. Se guarda solo en este dispositivo.</p>
+      <div class="field"><label for="scriptUrl">URL del script</label><input id="scriptUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec"></div>
+      <button class="btn" id="saveCfgBtn" type="button">Guardar</button>
+    </div>
+    <div id="autoStatus"></div>
+
+    <div class="report" id="reportBox" hidden></div>
+  </section>
+
+  <p class="foot">Simulación educativa con fines de demostración. La física usa P = ½·ρ·A·v³·Cp con velocidad de conexión 3 m/s, de corte 25 m/s y velocidad nominal 12 m/s; el ángulo de las aspas regula el coeficiente Cp como lo haría el control de paso (pitch) real de una turbina.</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  var nf0 = new Intl.NumberFormat('es', { maximumFractionDigits: 0 });
+  var nf1 = new Intl.NumberFormat('es', { maximumFractionDigits: 1 });
+  var nf2 = new Intl.NumberFormat('es', { maximumFractionDigits: 2 });
+
+  /* ---------------- Constantes físicas ---------------- */
+  var ROTOR_D = 56;          // m, diámetro de cada rotor
+  var AREA = Math.PI * Math.pow(ROTOR_D / 2, 2);
+  var AIR_DENSITY = 1.225;   // kg/m³ a nivel del mar
+  var CUT_IN = 3, CUT_OUT = 25, RATED_V = 12; // m/s
+  var CP_MAX = 0.45, CP_MIN = 0.05, ANGLE_MAX = 30; // ° — a más ángulo, menor Cp (control de paso)
+  var N_TURBINES = 4;
+  var SIM_HOURS_PER_TICK = 0.1; // 1 segundo real ≈ 6 minutos simulados
+  var MAX_HISTORY = 300;
+  var CORREO_DESTINO = 'armentapintodgabriel@gmail.com';
+  var DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzudSv0xxHCIAFc_Y27IGzTk3TNlzFKiXe2ryq9skCpBN9S_ujg0WngN4uYMlu16KoX/exec';
+
+  /* ---------------- Estado ---------------- */
+  var state = {
+    on: false,
+    wind: 9,
+    angle: 5,
+    simHours: 0,
+    totalEnergy: 0,       // kWh, acumulado histórico total
+    battCapacity: 50,     // kWh
+    battEnergy: 0,        // kWh almacenados actualmente
+    history: []            // {t,p,v,a,cp,e}
+  };
+  var tickTimer = null;
+
+  /* ---------------- Física ---------------- */
+  function computeCp(angleDeg) {
+    var cp = CP_MAX - (angleDeg / ANGLE_MAX) * (CP_MAX - CP_MIN);
+    return Math.max(CP_MIN, Math.min(CP_MAX, cp));
+  }
+  function computePower(v, angleDeg) {
+    if (v < CUT_IN || v > CUT_OUT) return { perTurbineKW: 0, totalKW: 0, cp: 0 };
+    var cp = computeCp(angleDeg);
+    var vUsed = Math.min(v, RATED_V); // control de paso limita la potencia por encima de la velocidad nominal
+    var kw = 0.5 * AIR_DENSITY * AREA * Math.pow(vUsed, 3) * cp / 1000;
+    return { perTurbineKW: kw, totalKW: kw * N_TURBINES, cp: cp };
+  }
+
+  /* ---------------- Interfaz: controles ---------------- */
+  var powerSwitch = $('#powerSwitch'), statuspill = $('#statuspill'), statustxt = $('#statustxt');
+  var windRange = $('#windRange'), angleRange = $('#angleRange'), capInput = $('#capInput');
+
+  function setBladeDuration(v) {
+    var running = state.on && v >= CUT_IN && v <= CUT_OUT;
+    var dur = Math.max(0.9, 16 / (v + 1));
+    document.documentElement.style.setProperty('--blade-dur', dur.toFixed(2) + 's');
+    $$('.blades').forEach(function (b) { b.classList.toggle('run', running); });
+  }
+  function setWindVisual(v) {
+    var dur = Math.max(1.2, 9 / (v / 4 + 0.6));
+    document.documentElement.style.setProperty('--wind-dur', dur.toFixed(2) + 's');
+    $$('.particle').forEach(function (p) { p.style.opacity = v > 0.3 ? '' : '0'; });
+  }
+  function setFlows(on) { $$('.flow').forEach(function (f) { f.classList.toggle('on', on); }); }
+
+  function applyPower(on) {
+    state.on = on;
+    powerSwitch.setAttribute('aria-pressed', on ? 'true' : 'false');
+    statuspill.classList.toggle('on', on);
+    statustxt.textContent = on ? 'ENCENDIDO' : 'APAGADO';
+    $('#tState').textContent = on ? 'ENCENDIDO' : 'APAGADO';
+    $('#tState').classList.toggle('red', !on);
+    $('#tState').classList.toggle('blue', on);
+    setBladeDuration(state.wind);
+    setFlows(on);
+    if (on) {
+      if (!tickTimer) tickTimer = setInterval(tick, 1000);
+      tick();
+    } else {
+      renderLive(computePower(0, state.angle)); // congelar en 0 visualmente, sin avanzar el tiempo
+      $('#tPower').textContent = '0 kW';
+      $('#tCp').textContent = '0.00';
+    }
+  }
+  powerSwitch.addEventListener('click', function () { applyPower(!state.on); });
+
+  windRange.addEventListener('input', function () {
+    state.wind = parseFloat(windRange.value);
+    $('#windVal').textContent = nf1.format(state.wind) + ' m/s';
+    $('#sceneWindTxt').innerHTML = 'Viento: <b>' + nf1.format(state.wind) + ' m/s</b>';
+    setBladeDuration(state.wind);
+    setWindVisual(state.wind);
+    if (!state.on) { var r = computePower(state.wind, state.angle); /* no se acumula, solo referencia visual */ }
+  });
+  angleRange.addEventListener('input', function () {
+    state.angle = parseFloat(angleRange.value);
+    $('#angleVal').textContent = nf0.format(state.angle) + '°';
+  });
+  capInput.addEventListener('change', function () {
+    var v = parseFloat(capInput.value);
+    if (!isFinite(v) || v < 5) v = 5;
+    state.battCapacity = v;
+    capInput.value = v;
+    renderBattery();
+  });
+  $('#resetBtn').addEventListener('click', function () {
+    if (!confirm('¿Reiniciar toda la simulación? Se perderán el historial y la energía acumulada.')) return;
+    applyPower(false);
+    state.simHours = 0; state.totalEnergy = 0; state.battEnergy = 0; state.history = [];
+    renderDays(); renderBattery(); renderChart();
+    $('#reportBox').hidden = true;
+    $('#csvBtn').disabled = true; $('#mailBtn').disabled = true; $('#autoBtn').disabled = true; $('#mailNote').hidden = true;
+    $('#autoStatus').innerHTML = '';
+  });
+
+  /* ---------------- Simulación ---------------- */
+  function tick() {
+    if (!state.on) return;
+    state.simHours += SIM_HOURS_PER_TICK;
+    var r = computePower(state.wind, state.angle);
+    var deltaKWh = r.totalKW * SIM_HOURS_PER_TICK;
+    state.totalEnergy += deltaKWh;
+    state.battEnergy = Math.min(state.battCapacity, state.battEnergy + deltaKWh);
+
+    state.history.push({ t: state.simHours, p: r.totalKW, v: state.wind, a: state.angle, cp: r.cp, e: state.totalEnergy });
+    if (state.history.length > MAX_HISTORY) state.history.shift();
+
+    renderLive(r);
+    renderBattery();
+    renderDays();
+    renderChart();
+  }
+
+  function renderLive(r) {
+    $('#tPower').textContent = nf0.format(r.totalKW) + ' kW';
+    $('#tWind').textContent = nf1.format(state.wind) + ' m/s';
+    $('#tCp').textContent = nf2.format(r.cp);
+    $('#tEnergy').textContent = nf2.format(state.totalEnergy) + ' kWh';
+    $('#tAngle').textContent = nf0.format(state.angle) + '°';
+    $('#tBatt').textContent = nf0.format(state.battCapacity ? state.battEnergy / state.battCapacity * 100 : 0) + ' %';
+  }
+
+  function renderBattery() {
+    var pct = state.battCapacity ? Math.min(100, state.battEnergy / state.battCapacity * 100) : 0;
+    $('#battFill').style.height = pct + '%';
+    $('#battFill').classList.toggle('low', pct < 15);
+    $('#battPct').textContent = nf0.format(pct) + ' %';
+    $('#battPct').classList.toggle('low', pct < 15);
+    $('#battSub').textContent = nf2.format(state.battEnergy) + ' kWh almacenados de ' + nf0.format(state.battCapacity) + ' kWh de capacidad';
+    $('#tBatt').textContent = nf0.format(pct) + ' %';
+    var barH = Math.round(pct / 100 * 50);
+    $('#batteryBar').setAttribute('height', barH);
+    $('#batteryBar').setAttribute('y', 33 - barH);
+  }
+
+  function renderDays() {
+    var activeDays = Math.floor(state.simHours / 24);
+    var currentDay = activeDays + 1;
+    $('#dDay').textContent = nf0.format(currentDay);
+    $('#dActive').textContent = nf0.format(activeDays);
+    $('#dHours').textContent = nf1.format(state.simHours);
+    $('#dEnergy').textContent = nf1.format(state.totalEnergy);
+  }
+
+  /* ---------------- Gráfico (SVG a mano, sin dependencias) ---------------- */
+  var serP = $('#serP'), serV = $('#serV'), serE = $('#serE');
+  [serP, serV, serE].forEach(function (c) { c.addEventListener('change', renderChart); });
+
+  function normalize(arr) {
+    var min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
+    if (max - min < 1e-9) return arr.map(function () { return 0.5; });
+    return arr.map(function (v) { return (v - min) / (max - min); });
+  }
+  function toPoints(norm, w, h) {
+    if (norm.length < 2) return '';
+    return norm.map(function (v, i) {
+      var x = (i / (norm.length - 1)) * w;
+      var y = h - v * (h - 10) - 5;
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+  }
+  function renderChart() {
+    var W = 600, H = 190;
+    var grid = $('#chartGrid');
+    grid.innerHTML = [0, 1, 2, 3].map(function (i) {
+      var y = (H / 3) * i;
+      return '<line x1="0" y1="' + y + '" x2="' + W + '" y2="' + y + '"/>';
+    }).join('');
+    var h = state.history;
+    var note = $('#chartNote');
+    if (h.length < 2) {
+      $('#lineP').setAttribute('points', ''); $('#lineV').setAttribute('points', ''); $('#lineE').setAttribute('points', '');
+      note.textContent = 'Sin datos todavía — enciende el parque para empezar a registrar.';
+      return;
+    }
+    note.textContent = 'Mostrando las últimas ' + h.length + ' muestras (' + nf1.format(h[0].t) + ' h a ' + nf1.format(h[h.length - 1].t) + ' h simuladas).';
+    $('#lineP').setAttribute('points', serP.checked ? toPoints(normalize(h.map(function (d) { return d.p; })), W, H) : '');
+    $('#lineV').setAttribute('points', serV.checked ? toPoints(normalize(h.map(function (d) { return d.v; })), W, H) : '');
+    $('#lineE').setAttribute('points', serE.checked ? toPoints(normalize(h.map(function (d) { return d.e; })), W, H) : '');
+  }
+
+  /* ---------------- Informe ---------------- */
+  var lastReport = null;
+  function buildStats() {
+    var h = state.history;
+    var activeDays = Math.floor(state.simHours / 24);
+    if (!h.length) {
+      return {
+        days: activeDays, hours: state.simHours, totalEnergy: state.totalEnergy,
+        battEnergy: state.battEnergy, battCap: state.battCapacity,
+        avgWind: state.wind, maxWind: state.wind, avgPower: 0, maxPower: 0,
+        avgAngle: state.angle, avgCp: computeCp(state.angle), samples: 0
+      };
+    }
+    var sum = function (k) { return h.reduce(function (a, d) { return a + d[k]; }, 0); };
+    var max = function (k) { return h.reduce(function (a, d) { return Math.max(a, d[k]); }, -Infinity); };
+    return {
+      days: activeDays, hours: state.simHours, totalEnergy: state.totalEnergy,
+      battEnergy: state.battEnergy, battCap: state.battCapacity,
+      avgWind: sum('v') / h.length, maxWind: max('v'),
+      avgPower: sum('p') / h.length, maxPower: max('p'),
+      avgAngle: sum('a') / h.length, avgCp: sum('cp') / h.length, samples: h.length
+    };
+  }
+  function battStatusTxt(pct) { return pct >= 97 ? 'Llena' : pct <= 5 ? 'Casi vacía' : 'Cargando'; }
+
+  function buildNarrative(s) {
+    var pct = s.battCap ? s.battEnergy / s.battCap * 100 : 0;
+    return [
+      'El parque eólico G.P. lleva ' + nf1.format(s.hours) + ' horas simuladas de funcionamiento, equivalentes a ' + nf0.format(s.days) + ' día(s) completo(s) de actividad.',
+      'Durante ese periodo generó un total acumulado de ' + nf2.format(s.totalEnergy) + ' kWh, con una potencia promedio de ' + nf0.format(s.avgPower) + ' kW y un pico máximo de ' + nf0.format(s.maxPower) + ' kW.',
+      'El viento promedio registrado fue de ' + nf1.format(s.avgWind) + ' m/s, con una ráfaga máxima de ' + nf1.format(s.maxWind) + ' m/s. El ángulo de las aspas se mantuvo en promedio en ' + nf0.format(s.avgAngle) + '°, lo que dejó un coeficiente de rendimiento (Cp) promedio de ' + nf2.format(s.avgCp) + '.',
+      'La batería guarda hoy ' + nf2.format(s.battEnergy) + ' kWh de ' + nf0.format(s.battCap) + ' kWh de capacidad (' + nf0.format(pct) + ' %), estado: ' + battStatusTxt(pct) + '.'
+    ];
+  }
+
+  function renderReport() {
+    var s = buildStats();
+    var pct = s.battCap ? s.battEnergy / s.battCap * 100 : 0;
+    lastReport = { stats: s, generated: new Date() };
+    var box = $('#reportBox');
+    box.hidden = false;
+    box.innerHTML =
+      '<h3>INFORME — ENERGÍA EÓLICA G.P. · ' + lastReport.generated.toLocaleString() + '</h3>' +
+      buildNarrative(s).map(function (p) { return '<p>' + p + '</p>'; }).join('') +
+      '<div class="rgrid">' +
+      '<div><span>Días de actividad</span><span>' + nf0.format(s.days) + '</span></div>' +
+      '<div><span>Horas simuladas</span><span>' + nf1.format(s.hours) + ' h</span></div>' +
+      '<div><span>Energía total acumulada</span><span>' + nf2.format(s.totalEnergy) + ' kWh</span></div>' +
+      '<div><span>Energía en batería</span><span>' + nf2.format(s.battEnergy) + ' kWh</span></div>' +
+      '<div><span>Capacidad de batería</span><span>' + nf0.format(s.battCap) + ' kWh</span></div>' +
+      '<div><span>Estado de batería</span><span>' + battStatusTxt(pct) + ' (' + nf0.format(pct) + ' %)</span></div>' +
+      '<div><span>Viento promedio</span><span>' + nf1.format(s.avgWind) + ' m/s</span></div>' +
+      '<div><span>Viento máximo</span><span>' + nf1.format(s.maxWind) + ' m/s</span></div>' +
+      '<div><span>Potencia promedio</span><span>' + nf0.format(s.avgPower) + ' kW</span></div>' +
+      '<div><span>Potencia máxima</span><span>' + nf0.format(s.maxPower) + ' kW</span></div>' +
+      '<div><span>Ángulo de aspas promedio</span><span>' + nf0.format(s.avgAngle) + '°</span></div>' +
+      '<div><span>Cp promedio</span><span>' + nf2.format(s.avgCp) + '</span></div>' +
+      '</div>';
+    $('#csvBtn').disabled = false;
+    $('#mailBtn').disabled = false;
+    $('#autoBtn').disabled = false;
+    $('#mailNote').hidden = false;
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  $('#genReportBtn').addEventListener('click', renderReport);
+
+  /* ---------------- Exportar CSV (compatible con Google Sheets) ---------------- */
+  function csvEsc(v) { v = String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function csvRow(arr) { return arr.map(csvEsc).join(',') + '\r\n'; }
+
+  function buildCSV() {
+    if (!lastReport) renderReport();
+    var s = lastReport.stats;
+    var pct = s.battCap ? s.battEnergy / s.battCap * 100 : 0;
+    var out = '';
+    out += csvRow(['INFORME — ENERGÍA EÓLICA G.P.']);
+    out += csvRow(['Generado', lastReport.generated.toLocaleString()]);
+    out += '\r\n';
+
+    out += csvRow(['RESUMEN']);
+    out += csvRow(['Campo', 'Valor']);
+    out += csvRow(['Días de actividad', nf0.format(s.days)]);
+    out += csvRow(['Horas simuladas', nf1.format(s.hours)]);
+    out += csvRow(['Energía total acumulada (kWh)', nf2.format(s.totalEnergy)]);
+    out += csvRow(['Potencia promedio (kW)', nf0.format(s.avgPower)]);
+    out += csvRow(['Potencia máxima (kW)', nf0.format(s.maxPower)]);
+    out += '\r\n';
+
+    out += csvRow(['ESTADO DE LA BATERÍA']);
+    out += csvRow(['Capacidad (kWh)', nf0.format(s.battCap)]);
+    out += csvRow(['Energía almacenada (kWh)', nf2.format(s.battEnergy)]);
+    out += csvRow(['Carga (%)', nf0.format(pct)]);
+    out += csvRow(['Estado', battStatusTxt(pct)]);
+    out += '\r\n';
+
+    out += csvRow(['VELOCIDAD DEL VIENTO']);
+    out += csvRow(['Promedio (m/s)', nf1.format(s.avgWind)]);
+    out += csvRow(['Máxima (m/s)', nf1.format(s.maxWind)]);
+    out += '\r\n';
+
+    out += csvRow(['ÁNGULO DE LAS ASPAS']);
+    out += csvRow(['Promedio (°)', nf0.format(s.avgAngle)]);
+    out += '\r\n';
+
+    out += csvRow(['COEFICIENTE DE RENDIMIENTO (Cp)']);
+    out += csvRow(['Promedio', nf2.format(s.avgCp)]);
+    out += '\r\n';
+
+    out += csvRow(['ENERGÍA GENERADA Y ACUMULADA']);
+    out += csvRow(['Energía total (kWh)', nf2.format(s.totalEnergy)]);
+    out += csvRow(['Muestras registradas', nf0.format(s.samples)]);
+    out += '\r\n';
+
+    out += csvRow(['DATOS HISTÓRICOS']);
+    out += csvRow(['Hora simulada (h)', 'Potencia (kW)', 'Viento (m/s)', 'Ángulo aspas (°)', 'Cp', 'Energía acumulada (kWh)']);
+    state.history.forEach(function (d) {
+      out += csvRow([nf1.format(d.t), nf0.format(d.p), nf1.format(d.v), nf0.format(d.a), nf2.format(d.cp), nf2.format(d.e)]);
+    });
+    return out;
+  }
+  $('#csvBtn').addEventListener('click', async function () {
+    var csv = buildCSV();
+    var stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+    var filename = 'informe_parque_eolico_gp_' + stamp + '.csv';
+    var data = '\uFEFF' + csv;
+    try {
+      if (window.claude && window.claude.use) {
+        var downloads = await window.claude.use('downloads');
+        if (downloads) { await downloads.save({ filename: filename, data: data }); return; }
+      }
+    } catch (e) { /* si el viewer rechaza o no está disponible, cae al método de archivo local */ }
+    var blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  });
+
+  /* ---------------- Enviar por correo (mailto, sin credenciales) ---------------- */
+  $('#mailBtn').addEventListener('click', function () {
+    if (!lastReport) renderReport();
+    var s = lastReport.stats;
+    var pct = s.battCap ? s.battEnergy / s.battCap * 100 : 0;
+    var subject = 'Informe — Energía Eólica G.P.';
+    var body = buildNarrative(s).join('\n\n') +
+      '\n\n— Resumen numérico —\n' +
+      'Días de actividad: ' + nf0.format(s.days) + '\n' +
+      'Horas simuladas: ' + nf1.format(s.hours) + '\n' +
+      'Energía total acumulada: ' + nf2.format(s.totalEnergy) + ' kWh\n' +
+      'Batería: ' + nf2.format(s.battEnergy) + ' / ' + nf0.format(s.battCap) + ' kWh (' + nf0.format(pct) + ' %, ' + battStatusTxt(pct) + ')\n' +
+      'Viento promedio / máximo: ' + nf1.format(s.avgWind) + ' / ' + nf1.format(s.maxWind) + ' m/s\n' +
+      'Potencia promedio / máxima: ' + nf0.format(s.avgPower) + ' / ' + nf0.format(s.maxPower) + ' kW\n' +
+      'Ángulo de aspas promedio: ' + nf0.format(s.avgAngle) + '°\n' +
+      'Cp promedio: ' + nf2.format(s.avgCp) + '\n\n' +
+      '(Historial completo disponible en el CSV descargado desde la aplicación.)';
+    var href = 'mailto:' + encodeURIComponent(CORREO_DESTINO) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    window.location.href = href;
+  });
+
+  /* ---------------- Envío automático (Apps Script: hoja + PDF) ---------------- */
+  function getScriptURL() { try { return localStorage.getItem('eolico_script_url') || DEFAULT_SCRIPT_URL; } catch (e) { return DEFAULT_SCRIPT_URL; } }
+  function setScriptURL(u) { try { localStorage.setItem('eolico_script_url', u); } catch (e) { /* sin almacenamiento */ } }
+
+  $('#cfgToggle').addEventListener('click', function () {
+    var box = $('#cfgbox');
+    box.hidden = !box.hidden;
+    if (!box.hidden) $('#scriptUrl').value = getScriptURL();
+  });
+  $('#saveCfgBtn').addEventListener('click', function (e) {
+    setScriptURL($('#scriptUrl').value.trim());
+    e.target.textContent = 'Guardado ✓';
+    setTimeout(function () { e.target.textContent = 'Guardar'; }, 1500);
+  });
+
+  function autoStatus(kind, html) {
+    $('#autoStatus').innerHTML = '<div class="status-line' + (kind ? ' ' + kind : '') + '">' + html + '</div>';
+  }
+  $('#autoBtn').addEventListener('click', function () {
+    var url = getScriptURL();
+    if (!url) { autoStatus('err', 'Primero pega la URL del script en «Configurar envío automático».'); $('#cfgbox').hidden = false; return; }
+    if (!lastReport) renderReport();
+    var s = lastReport.stats;
+    var pct = s.battCap ? s.battEnergy / s.battCap * 100 : 0;
+    autoStatus('', '<span class="spin" aria-hidden="true"></span> Escribiendo en la hoja y enviando el PDF…');
+    fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        generado: lastReport.generated.toISOString(),
+        dias: s.days, horas: s.hours, energiaTotal: s.totalEnergy,
+        bateriaEnergia: s.battEnergy, bateriaCap: s.battCap, bateriaPct: pct, bateriaEstado: battStatusTxt(pct),
+        vientoProm: s.avgWind, vientoMax: s.maxWind,
+        potProm: s.avgPower, potMax: s.maxPower,
+        anguloProm: s.avgAngle, cpProm: s.avgCp, muestras: s.samples,
+        historico: state.history.slice(-150)
+      })
+    }).then(function () {
+      autoStatus('ok', 'Listo — el informe se guardó en tu hoja de cálculo y el PDF se envió a ' + CORREO_DESTINO + '.');
+    }).catch(function () {
+      autoStatus('err', 'No se pudo enviar. Revisa tu conexión o la URL del script.');
+    });
+  });
+
+  /* ---------------- Inicio ---------------- */
+  setBladeDuration(state.wind);
+  setWindVisual(state.wind);
+  renderBattery();
+  renderDays();
+  renderChart();
+  applyPower(false);
+})();
+</script>
+</body>
+</html>
